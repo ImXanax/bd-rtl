@@ -1,0 +1,287 @@
+/**
+ * @name BDRTL
+ * @description attempts to make chats RTL
+ * @version 1.0.0
+ * @author ImXanax
+ * @authorId 413755451373518864
+ * @website https://github.com/ImXanax/bd-rtl
+ * @source https://github.com/ImXanax/bd-rtl/blob/main/bd-rtl.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/ImXanax/bd-rtl/refs/heads/main/bd-rtl.plugin.js
+ */
+
+//initialize BDApi contexts
+const BD = new BdApi("RTLPatcher"),
+    { getByKeys } = BD.Webpack,
+    CurrentUserId = getByKeys("getCurrentUser").getCurrentUser().id,
+    MessagesClass = getByKeys("messageListItem").messageListItem, MessageContentClass = getByKeys("markup").markup,
+    MessageDelete = getByKeys("deleteMessage"), MessageSend = getByKeys("sendMessage");
+
+module.exports = class RTLPatcher {
+    constructor() {
+        //namespace
+        this.namespace = "RTLPatcher";
+
+        //define css classes
+        this.myStyles = `
+      .myAvatar {
+        right: -50px !important;
+        left: unset !important;
+      }
+      .myAvatarDecoration {
+        right: -53px !important;
+        left: unset !important;
+      }
+      .myMessage {
+        display: flex !important;
+        flex-direction: row-reverse !important;
+        right: 50px !important;
+        width: unset !important;
+      }
+      .myWrapper {
+        display: flex;
+        flex-direction: column;
+      }
+    `;
+
+        //store previous/current url
+        this.currentUrl = "";
+
+        //mutation recoreds vars
+        this.firstPatch = true;
+        this.isObserved = false;
+    }
+
+    start() {
+        //inject css classes
+        this.generateGlobalCSS();
+
+        //patch sent message style
+        BD.Patcher.before(MessageSend, "sendMessage", () => {
+            this.SendMsgHandler();
+        })
+    }
+
+    onSwitch() {
+        //prevent handling of reload or non-chat pages
+        const pattern = /(http(s)?:\/\/.)?(www\.)?(ptb|canary)\.discord.com\/channels/sg;
+        if (document.URL == this.currentUrl || !pattern.test((document.URL)) || document.URL.split("/").pop() == "@me")
+            return;
+
+        //update the current url
+        this.currentUrl = document.URL;
+
+        //handle chat design
+        //wait for observer
+        if (this.firstPatch) {
+            this.firstPatch = false;
+            this.ChatLoadHandler();
+            this.AlignHandler();
+        }
+
+        //not observed due to cache
+        if (!this.isObserved) {
+            this.ChatLoadHandler();
+            this.AlignHandler();
+        }
+    }
+
+    observer(changes) {
+        if (changes.type == "childList" && changes.addedNodes.length == 1) {
+            if (changes.addedNodes[0].className == MessagesClass) {
+                this.isObserved = true;
+                //handle messages
+                this.ChatLoadHandler();
+                //align contents of messages
+                this.AlignHandler();
+                //remove temp sent messeage style
+                BdApi.DOM.removeStyle(this.namespace + "-NextMessage");
+
+                return;
+            }
+        }
+        this.isObserved = false;
+    }
+
+    stop() {
+        //remove injected styles
+        BdApi.DOM.removeStyle(this.namespace);
+        BdApi.DOM.removeStyle(this.namespace + "-NextMessage");
+
+        //unpatch all
+        BD.Patcher.unpatchAll();
+
+        //toast warn
+        BdApi.UI.showToast("Restart Discord may require for changes to take effect!", { type: "warning", timeout: 5000 });
+    }
+
+    SendMsgHandler() {
+        //handle the newly sent message style
+        //target the last message in the chat
+        const lastHeadMessagesDiv = document.querySelector(`.${MessagesClass}:last-of-type`);
+        //generate special style by it's id
+        this.generateNextMessageCSS(lastHeadMessagesDiv.id);
+    }
+
+    ChatLoadHandler() {
+        //first, gather all head messages, add to headMessagesDiv
+        //second, gather childs of these heads, concat with headMessagesDiv
+        //third, restyle elements we stored in headMessagesDiv
+
+        //target all the head messages
+        const headMessagesDiv = [...document.querySelectorAll(`.${MessagesClass} > [class^=message][class*=groupStart]`)];
+        //if it finds nothing, null it
+        if (!Boolean(headMessagesDiv.length))
+            return;
+
+        //filter user messages by discord UserID in head messages
+        let myMessagesDiv;
+        function isMsgMine(msg) {
+            //use avatar src to identify sender ID
+            const srcContainer = msg.querySelector(":not([class*=repliedMessage]) > [src]");
+            if (srcContainer)
+                //match srcID part and UserID
+                if (srcContainer.src.split("/").find(el => /^[0-9]+$/.test(el)) == CurrentUserId)
+                    return true;
+            return false;
+        }
+        myMessagesDiv = headMessagesDiv.filter(div => isMsgMine(div));
+
+        //look for child messages of each head messages
+        //and push them to lovely myChildMessagesDiv
+        let myChildMessagesDiv = [];
+        myMessagesDiv.forEach(div => {
+            //chnage div element from "messageWrapper" to "messageContainer"
+            const currentContainer = div?.parentElement;
+
+            try {
+                //in case of unexpected return, go with next head messages
+                if (!Boolean(currentContainer) || currentContainer.tagName != "LI")
+                    return;
+            }
+            catch { return; }
+            finally {
+                //we need to find the next message container
+                let nextContainer = currentContainer?.nextElementSibling;
+                try {
+                    //continue going to the next element until reach message container
+                    while (Boolean(nextContainer) && nextContainer.tagName != "LI") {
+                        nextContainer = nextContainer?.nextElementSibling;
+                    }
+
+                    //undefined nextContainer shows we're at the end
+                    //of the tree already, so we have no other message
+                    //and groupStart in messageWrapper classes shows that
+                    //there's no child here and we're dealing with a header
+                    if (!Boolean(nextContainer) || /groupStart/.test(nextContainer.querySelector("div:not([class*=repliedMessage])").className))
+                        return;
+                }
+                catch { return; }
+                finally {
+                    do {
+                        try {
+                            //break the while, because we're looking for childs😋
+                            if (/groupStart/.test(nextContainer.querySelector("div:not([class*=repliedMessage])")?.className))
+                                break;
+
+                            //it exists and it's obviously message container then let's pushhh...
+                            if (nextContainer.tagName == "LI")
+                                myChildMessagesDiv.push(nextContainer.querySelector("div:not([class*=repliedMessage])"))
+                        }
+                        catch { }
+                        finally {
+                            //well done! let's go next
+                            nextContainer = nextContainer?.nextElementSibling;
+                        }
+                    } while (Boolean(nextContainer))
+                }
+            }
+        })
+
+        //new set of unique values by merging myMessagesDiv(heads)
+        //and myChildMessagesDiv(childs) together in myMessagesDiv
+        myMessagesDiv = [...new Set([...myMessagesDiv, ...myChildMessagesDiv])];
+
+        myMessagesDiv.forEach(msg => {
+            //restyle message container
+            msg.parentElement.classList.add("myMessage");
+
+            //restyle message wrapper
+            msg.classList.add("myWrapper");
+
+            //as you know, not all messages have an avatar
+            try {
+                //restyle user avatar
+                msg.querySelector(":not([class*=repliedMessage]) > [src]").classList.add("myAvatar");
+
+                //restyle user avatar decoration
+                if (msg.querySelector(":not([class*=repliedMessage]) > [src]")?.nextElementSibling?.tagName == "IMG")
+                    msg.querySelector("[class^=avatarDecoration]").classList.add("myAvatarDecoration");
+            } catch { }
+        });
+    }
+
+    AlignHandler() {
+        //align contents inside of message wrappers
+        //gather all message containers in the chat
+        const messagesDiv = [...document.querySelectorAll(`.${MessagesClass}`)]
+
+        //if it finds nothing, null it
+        if (!messagesDiv)
+            return;
+
+        //set align from left to auto
+        messagesDiv.forEach(msg => {
+            try {
+                const contentContainer = msg.querySelector(`.${MessageContentClass}:not([class*=replied])`);
+                const contentTexts = contentContainer?.textContent;
+
+                //enable auto text direction
+                contentContainer.dir = "auto";
+
+                //choose the best direction for alignment
+                if (Boolean(contentTexts)) {
+                    const emojiPattern = /<a?:.+?:\d{18}>|\p{Extended_Pictographic}/gu, urlPattern = /(https?:\/\/[^\s]+)/g;
+                    const contentWords = contentTexts.trim().replace(emojiPattern, "").replace(urlPattern, "").split(" ", 4) ?? [];
+
+                    //align same as direction
+                    if (contentWords.length > 10) {
+                        contentContainer.style.textAlign = "right";
+                        return;
+                    }
+                }
+
+                //center content container
+                contentContainer.style.textAlign = "right";
+            } catch { }
+        })
+    }
+
+    generateNextMessageCSS(currentLastMsgId) {
+        //set pre-style for message that will be created soon
+        //it helps Low Spec users to not see message movement
+        //message will be the last one among others certainly
+        const sentMsg = `#${currentLastMsgId} ~ .${MessagesClass}:last-of-type`;
+
+        //modify global css by specifying selectors for sent message
+        let myNextMessageStyles = this.myStyles
+            .replace(".myMessage", sentMsg)
+            .replace(".myWrapper", `${sentMsg} > [class^=message][class*=groupStart]`)
+            .replace(".myAvatar", `${sentMsg} > [class^=message][class*=groupStart] :not([class*=repliedMessage]) > [src]:first-of-type`)
+            .replace(".myAvatarDecoration", `${sentMsg} > [class^=message][class*=groupStart] :not([class*=repliedMessage]) > [src]:first-of-type + img`)
+
+        //inject CSS
+        BdApi.DOM.addStyle(this.namespace + "-NextMessage", myNextMessageStyles);
+
+        //align again
+        this.AlignHandler();
+    }
+
+    generateGlobalCSS() {
+        //if there is any CSS we have already, remove it
+        BdApi.DOM.removeStyle(this.namespace);
+
+        //inject CSS
+        BdApi.DOM.addStyle(this.namespace, this.myStyles);
+    }
+};
+/*@end@*/

@@ -59,5 +59,13 @@ more readable when using an RTL based language
 
 ---
 
+## 🐛 Known Issues
+- Threads do not have support yet
+- Navigation around channels may lead to issues with the position of messages
+  - scrolling to an unloaded part of the channel temporarily fixes this issue
+- Attachments may overflow out of bounds of the message box
+
+---
+
 ## ✨ Credits
 - Plugin by **ImXanax**

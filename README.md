@@ -8,7 +8,7 @@ It repositions avatars, aligns messages, and automatically adjusts text directio
 ## 📂 Files
 
 - `bd-rtl.plugin.js` → The main plugin (logic for patching chat layout).
-- `bd-rtl.theme.css` → Optional theme file (additional styles for consistency).
+- `bd-rtl.theme.css` → Helper theme file (additional styles for consistency).
 
 ---
 

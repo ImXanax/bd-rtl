@@ -221,39 +221,33 @@ module.exports = class RTLPatcher {
     }
 
     AlignHandler() {
-        //align contents inside of message wrappers
-        //gather all message containers in the chat
-        const messagesDiv = [...document.querySelectorAll(`.${MessagesClass}`)]
+        // Gather all message containers in the chat
+        const messagesDiv = [...document.querySelectorAll(`.${MessageContentClass}:not([class*=replied])`)];
 
-        //if it finds nothing, null it
-        if (!messagesDiv)
-            return;
-
-        //set align from left to auto
-        messagesDiv.forEach(msg => {
+        messagesDiv.forEach(contentContainer => {
             try {
-                const contentContainer = msg.querySelector(`.${MessageContentClass}:not([class*=replied])`);
-                const contentTexts = contentContainer?.textContent;
+                const text = contentContainer.textContent?.trim() ?? "";
 
-                //enable auto text direction
-                contentContainer.dir = "auto";
+                if (!text) return;
 
-                //choose the best direction for alignment
-                if (Boolean(contentTexts)) {
-                    const emojiPattern = /<a?:.+?:\d{18}>|\p{Extended_Pictographic}/gu, urlPattern = /(https?:\/\/[^\s]+)/g;
-                    const contentWords = contentTexts.trim().replace(emojiPattern, "").replace(urlPattern, "").split(" ", 4) ?? [];
+                // Regex: Persian, Arabic, Hebrew character ranges
+                const rtlPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\u0590-\u05FF]/;
 
-                    //align same as direction
-                    if (contentWords.length > 10) {
-                        contentContainer.style.textAlign = "right";
-                        return;
-                    }
+                if (rtlPattern.test(text)) {
+                    // If contains RTL characters
+                    contentContainer.dir = "rtl";
+                    contentContainer.style.textAlign = "right";
+                } else {
+                    // Otherwise force LTR
+                    contentContainer.dir = "ltr";
+                    contentContainer.style.textAlign = "left";
                 }
 
-                //center content container
-                contentContainer.style.textAlign = "right";
-            } catch { }
-        })
+            } catch (err) {
+                // align handler failing
+                console.error("[ERR:1010]:", err);
+            }
+        });
     }
 
     generateNextMessageCSS(currentLastMsgId) {

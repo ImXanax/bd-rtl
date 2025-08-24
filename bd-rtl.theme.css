@@ -9,12 +9,11 @@
  * @updateUrl https://raw.githubusercontent.com/ImXanax/bd-rtl/refs/heads/main/bd-rtl.theme.css
  */
 
-/* border gap for other msgs */
+/*border gap for other messages */
 li[id^="chat-messages-"]:not(li[class*="myMessage"]) {
     margin-left: 70px !important;
-
 }
-
+/* message headers , name and icon */
 li[id^="chat-messages-"] > div[class^="message"]  >div[class*="contents"] > h3[class^="header"] {
     display: flex;
     flex-direction: row-reverse;
@@ -24,7 +23,7 @@ li[id^="chat-messages-"] > div[class^="message"]  >div[class*="contents"] > h3[c
 
 /* set background for all msgs */
 li[id^="chat-messages-"] > div[class*="cozyMessage"] {
-    background: var(--bg-overlay-1,var(--background-message-hover)) !important;
+    border: 2px solid var(--bg-overlay-1,var(--background-message-hover)) !important;
     border-radius: 10px !important;
     padding: 5px !important;
     margin-bottom: 10px !important;
@@ -35,8 +34,6 @@ li[id^="chat-messages-"] > div[class*="cozyMessage"] {
 li[id^="chat-messages-"] > div[class*="cozyMessage"] > div[class^="contents"] {
     padding: 6px !important;
 }
-
-
 
 
 /* fix avatar of others outside their msgs */
@@ -51,6 +48,23 @@ li[id^="chat-messages-"] > div[class*="cozyMessage"] > div[class^="contents"] > 
     left: -54px !important;
     right: unset !important;
 }
+/* spine for messages with threads */
+li[id^="chat-messages-"] > div[class*="cozyMessage"][class*="hasThread"]:not(.myWrapper)::after{
+    left: calc(var(--custom-message-margin-horizontal) + var(--chat-avatar-size) / 2 - 66px) !important;
+}
+/* spine for my messages with threads */
+div.myWrapper[class*="hasThread"]::after{
+    left: auto !important; /* cancel left so it doesn’t conflict */
+
+    /* move to right instead of left */
+    right: calc(var(--custom-message-margin-horizontal) + var(--chat-avatar-size) / 2 - 66px);
+    /* size of spine */
+    border-left: unset;
+    border-bottom: 2px solid var(--spine-default);
+    border-bottom-right-radius: 8px;
+    border-bottom-left-radius: unset !important;
+    border-right: 2px solid var(--spine-default);
+}
 
 /* fix reply pseudo */
 div[class^="repliedMessage"]:not(.myWrapper):before {
@@ -62,7 +76,7 @@ div[class^="repliedMessage"]:not(.myWrapper):before {
     transform: rotateY(180deg) !important;
 }
 
-/*reply line hopefully*/
+/* clickable spine replies */
 div.myWrapper[class*="hasReply"] > div[id^="message-reply-context-"] > div[class^="repliedMessageClickableSpine"] {
     border-top-right-radius: 6px !important; /* flipped from left to right */
     border-top-left-radius: 0 !important; /* flipped from left to right */
@@ -76,7 +90,6 @@ div.myWrapper[class*="hasReply"] > div[id^="message-reply-context-"] > div[class
 div[id^="message-accessories"], div[id^="message-accessories"] > article, div[class^="visualMediaItemContainer"] {
     display: grid;
     justify-items: center !important;
-    justify-self: center !important;
     align-self: center !important;
 }
 div[id^="message-accessories"] > article + div {
@@ -84,14 +97,19 @@ div[id^="message-accessories"] > article + div {
     justify-content: space-between;
     margin-top: 1rem;
 }
+div[id^="message-accessories"] > div[class^="wrapper"] {
+    margin: 0.5rem 0 !important;
+}
+
 div[class^="nonVisualMediaItemContainer"] {
     align-items: center;
 }
 div[class^="nonVisualMediaItem"] {
-    max-width: 60%;
+    padding: 0.2rem 0 !important;
+    max-width: 100% !important;
 }
 
-/* removes reaction icon button */
+/*removes reaction icon button */
 /*div[aria-label="Add Reaction"] {*/
 /*    display: none !important;*/
 /*}*/
@@ -136,6 +154,8 @@ span[class*="timestampVisibleOnHover"] {
 /* fix texts direction in embeds */
 div[class^="gridContainer"] > div:first-child > div[class*="embed"], div[class^="gridContainer"] > div:first-child > div[class*="embed"] > span, div[class^="gridContainer"] > div:first-child > div[class*="embed"] > a {
     text-align: start;
+}
+div[class^="gridContainer"] {
 }
 
 /* centralized special msgs */

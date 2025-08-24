@@ -14,18 +14,29 @@ It repositions avatars, aligns messages, and automatically adjusts text directio
 
 ## 🚀 Installation
 
+### 1. Install BetterDiscord
+If you don’t already have BetterDiscord installed:
+1. Go to the [BetterDiscord website](https://betterdiscord.app/).
+2. Download the latest installer for your operating system.
+3. Run the installer and select your Discord version.
+4. Restart Discord after installation.
+
+---
+
+### 2. Install BD-RTL Plugin + Theme
+
 1. **Download** the files:
     - [`bd-rtl.plugin.js`](./bd-rtl.plugin.js)
     - [`bd-rtl.theme.css`](./bd-rtl.theme.css)
 
-2. **Open BetterDiscord plugin folder:**
+2. **Open the Plugins folder:**
     - In Discord, go to:  
       `User Settings` → `BetterDiscord` → `Plugins` → `Open Plugins Folder`
 
 3. **Copy the plugin file:**
     - Place `bd-rtl.plugin.js` inside the `Plugins` folder.
 
-4. **Open BetterDiscord theme folder:**
+4. **Open the Themes folder:**
     - In Discord, go to:  
       `User Settings` → `BetterDiscord` → `Themes` → `Open Themes Folder`
 
